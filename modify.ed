@@ -1,0 +1,47 @@
+################################################
+#                                              #
+# Drop part that searches and verifies DVD     #
+#                                              #
+################################################
+#
+/#\ 7)\ Mount\ the\ live\ image\ device/,/#\ 11)\ Check\ for\ swap\ space/ d
+i
+# Steps 7-10 omitted, done differently
+#--------------------------------------
+
+#======================================
+# 11) Check for swap space
+.
+#
+#
+################################################
+#                                              #
+# Do our special mounting                      #
+#                                              #
+################################################
+#
+#
+/#\ 12)\ Mount\ OS\ image\ to\ \/mnt/,/#\ 13)\ Create\ system\ dependant\ files/ d
+i
+# 12) Mount OS image to /mnt
+#--------------------------------------
+runHook premount
+
+. /system_mount.sh
+
+validateRootTree
+runHook postmount
+
+#======================================
+# 13) Create system dependant files
+.
+#
+#
+################################################
+#                                              #
+# Write everything back                        #
+#                                              #
+################################################
+#
+w
+q
