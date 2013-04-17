@@ -1,0 +1,42 @@
+Live openSUSE USB Sticks
+========================
+
+Goal
+----
+
+Goal of this project is to create a live USB flash drives that are easy to
+update, allow users to boot new images downloaded from SUSE studio, allow them
+to have persistent changes on these images, share common home directory and fit
+as many images as possible.
+
+How to achieve that? By modifying initrd and using stacking filesystem -
+http://aufs.sourceforge.net/[aufs].
+
+Implementation
+--------------
+
+* images are compressed files stored on USB disk in one directory
+** currently ISO files from SUSE Studio are only supported format
+* uses stacking filesystem http://aufs.sourceforge.net/[aufs]
+** needs two extra patches in kernel
+** needs extra module
+** packages for 12.3 in http://build.opensuse.org/[home:-miska-:aufs]
+** upstream is alive, looks maintainable
+* we can start from default initrd with few modifications
+** replace modules
+** drop part that mounts and verifies DVD (section 7-10)
+** replace root mounting part (section 12)
+
+Features & status
+-----------------
+
+* can boot ISOs downloaded from SUSE Studio [done]
+* can support multiple images [wip]
+* can support persistent changes [todo]
+* can support persistent home [todo]
+
+Related links
+-------------
+
+* http://lizards.opensuse.org/2012/12/27/livecds/[comparison of compression methods]
+* http://lizards.opensuse.org/2012/12/29/making-different-opensuse-livecds/[using aufs + squashfs-xz for livecd]
