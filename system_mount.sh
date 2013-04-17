@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# Ask user to select one option
-function ask_for_select() {
-   local title="$1"
-   shift
-   dialog --menu "$title" 0 0 $# $@ 2> /tmp/dialog
-   target="`cat /tmp/dialog`"
-}
-
 function die() {
    systemException "$1" "reboot"
 }
@@ -15,6 +7,7 @@ function die() {
 function debug_p() {
    [ -z "${DEBUG}" ] || echo "$1"
    LAST_DEBUG="$1"
+   sleep 2
 }
 
 function debug_r() {
@@ -60,7 +53,7 @@ function add_iso() {
       label="ISO image ${label}"
       set_prop trg_desc "${label}"
       echo "\"${label}\""  >> "${TMP_CFG}"/.descs
-      echo "\"${target}\"" >> "${TMP_CFG}"/.trgs
+      echo "${target}" >> "${TMP_CFG}"/.trgs
    else
       die "Not SUSE studio ISO!"
    fi
@@ -68,7 +61,6 @@ function add_iso() {
 
 # Adds stacked image as possible target
 function add_stacked() {
-   local target
    target="${2}"
    clear_prop
    set_prop 'trg_type' "stack"
@@ -127,6 +119,10 @@ function add_smt() {
       *.conf) add_stacked "$1" "$2" ;;
       *) die "Something is broken, tried to add $2!";;
    esac
+   echo "label ${target}"                         >> "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg"
+   echo "  kernel linux"                          >> "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg"
+   echo "  append initrd=initrd target=${target}" >> "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg"
+   echo ""                                        >> "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg"
 }
 
 # Boot something
@@ -152,6 +148,7 @@ mkdir -p ${TMP_MNT}/usb
 
 # Find device we are booting from
 for disk in /dev/sd* /dev/sr* /dev/hd*; do
+   rm -f "${TMP_CFG}"/syslinux
    mount -t auto -o ro "${disk}" "${TMP_MNT}"/usb
    # It has magic directory
    if [ -d "${TMP_MNT}"/usb/openSUSE-Live ]; then
@@ -160,25 +157,37 @@ for disk in /dev/sd* /dev/sr* /dev/hd*; do
       for config in *.conf *.iso; do
          [ -f "${config}" ] || continue
          add_smt ${disk} ${config}
-         if [ -z "${TARGETS}" ]; then
-            TARGETS="${config}"
-         else
-            TARGETS="${TARGETS}$(echo "")${config}"
-         fi
-
+         TARGETS="${TARGETS}."
       done
    fi
    cd /
+   if [ -n "$(diff -Naru "${TMP_CFG}"/syslinux "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg")" ]; then
+      mount -o remount,rw "${TMP_MNT}/usb"
+      cp "${TMP_CFG}"/syslinux "${TMP_MNT}/usb/openSUSE-Live/syslinux/targets.cfg"
+   fi
    umount "${TMP_MNT}"/usb
 done
 
 [ "${TARGETS}" ] || die "Found nothing to boot..."
 
-mount -o bind /lib/modules /mnt/lib/modules
+debug_p "We have $(echo -n "${TARGETS}" | wc -c) targets..."
 
-if [ "${TARGETS}" ] && [ "$(echo "${TARGETS}" | wc -l)" -lt 2 ]; then
-   boot_smt "${TARGETS}"
+target="$(cat /proc/cmdline | sed -n 's|.*target=\([^[:blank:]]*\)[[:blank:]]*|\1|p')"
+
+[ "${target}" \!= refresh ] || reboot
+
+debug_p "Selecting target to boot (cmdline=$(cat /proc/cmdline))..."
+if [ -z "${target}" ]; then
+   debug_p "No target selected, choosing the first one..."
+   target="$(head -n1 "${TMP_CFG}"/.trgs)"
 fi
+debug_p "Final target is ${target}"
+boot_smt "${target}"
+
+debug_p "Mounting modules..."
+mkdir -p /mnt/lib/modules
+mount -o bind /lib/modules /mnt/lib/modules
+debug_r
 
 imageName="${trg_desc}"
 
@@ -198,5 +207,9 @@ done
 
 haveClicFS="yes"
 
-sleep 3
+debug_p "Booting in 10"
+debug_p "Booting in  8"
+debug_p "Booting in  6"
+debug_p "Booting in  4"
+debug_p "Booting in  2"
 
